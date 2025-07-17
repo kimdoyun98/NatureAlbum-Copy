@@ -140,7 +140,11 @@ class MapScreenViewModel @Inject constructor(
             }
 
             is MapIntent.PreloadListener -> {
-                reduce { state.copy(preloadState = intent.map) }
+                val (key, value) = intent.preload
+                val map = state.preloadState.toMutableMap()
+                map[key] = value
+
+                reduce { state.copy(preloadState = map.toImmutableMap()) }
             }
         }
     }

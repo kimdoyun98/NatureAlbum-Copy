@@ -81,7 +81,6 @@ import com.naver.maps.map.overlay.Overlay
 import com.naver.maps.map.overlay.OverlayImage
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableMap
-import kotlinx.collections.immutable.toImmutableMap
 import kotlinx.coroutines.launch
 
 @Composable
@@ -485,23 +484,19 @@ private fun preload(
     preloadState: ImmutableMap<String, PreloadState>,
     onIntent: (MapIntent) -> Unit,
 ) {
-    val map = preloadState.toMutableMap()
     val request = ImageRequest.Builder(context)
         .data(url)
         .listener(object : ImageRequest.Listener {
             override fun onStart(request: ImageRequest) {
-                map.getOrPut(url) { PreloadState.Loading }
-                onIntent(MapIntent.PreloadListener(map.toImmutableMap()))
+                onIntent(MapIntent.PreloadListener(url to PreloadState.Loading))
             }
 
             override fun onSuccess(request: ImageRequest, result: SuccessResult) {
-                map[url] = PreloadState.Success
-                onIntent(MapIntent.PreloadListener(map.toImmutableMap()))
+                onIntent(MapIntent.PreloadListener(url to PreloadState.Success))
             }
 
             override fun onError(request: ImageRequest, result: ErrorResult) {
-                map[url] = PreloadState.Fail
-                onIntent(MapIntent.PreloadListener(map.toImmutableMap()))
+                onIntent(MapIntent.PreloadListener(url to PreloadState.Fail))
             }
         })
         .crossfade(true)

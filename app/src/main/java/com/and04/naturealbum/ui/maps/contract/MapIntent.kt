@@ -40,5 +40,5 @@ sealed interface MapIntent {
 
     data class FriendDialogConfirm(val friends: ImmutableList<FirebaseFriend>) : MapIntent
 
-    data class PreloadListener(val map: ImmutableMap<String, PreloadState>): MapIntent
+    data class PreloadListener(val preload: Pair<String, PreloadState>): MapIntent
 }
