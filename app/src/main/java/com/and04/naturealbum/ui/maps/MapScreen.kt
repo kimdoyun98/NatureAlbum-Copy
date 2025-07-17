@@ -294,7 +294,7 @@ private fun EffectCollection(
                 state().scope?.launch {
                     totalPhotos.forEach { photo ->
                         launch {
-                            preload(photo.uri, context, imageLoader, state().preloadState, onIntent)
+                            preload(photo.uri, context, imageLoader, onIntent)
                         }
                     }
                 }
@@ -481,7 +481,6 @@ private fun preload(
     url: String,
     context: Context,
     imageLoader: ImageLoader,
-    preloadState: ImmutableMap<String, PreloadState>,
     onIntent: (MapIntent) -> Unit,
 ) {
     val request = ImageRequest.Builder(context)
