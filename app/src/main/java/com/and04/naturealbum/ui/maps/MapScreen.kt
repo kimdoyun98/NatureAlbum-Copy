@@ -9,12 +9,14 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -382,43 +384,36 @@ private fun PhotoGrid(
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         groupByLabel.forEach { (label, photos) ->
-            item {
-                val backgroundColor = label.color.toColor()
-                SuggestionChip(
-                    onClick = {},
-                    label = {
-                        Text(
-                            text = label.name,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    },
-                    modifier = modifier,
-                    colors = SuggestionChipDefaults.suggestionChipColors(
-                        containerColor = backgroundColor,
-                        labelColor = if (backgroundColor.luminance() > 0.5f) Color.Black else Color.White
-                    ),
-                )
-            }
-            items(photos.windowed(columnCount, columnCount, true)) { row ->
+            val backgroundColor = label.color.toColor()
+
+            labelWithPhotos(
+                label = {
+                    SuggestionChip(
+                        onClick = {},
+                        label = {
+                            Text(
+                                text = label.name,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        },
+                        modifier = modifier,
+                        colors = SuggestionChipDefaults.suggestionChipColors(
+                            containerColor = backgroundColor,
+                            labelColor = if (backgroundColor.luminance() > 0.5f) Color.Black else Color.White
+                        ),
+                    )
+                },
+                columnCount = columnCount,
+                photos = photos,
+            ) { row ->
                 Row(
                     modifier = modifier, horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     row.forEach { photo ->
                         when (preloadState[photo.uri] ?: PreloadState.Fail) {
                             is PreloadState.Loading -> {
-                                Box(
-                                    modifier = modifier
-                                        .wrapContentSize(Alignment.Center)
-                                        .aspectRatio(1f)
-                                        .weight(1f)
-                                        .clip(MaterialTheme.shapes.medium),
-                                ) {
-                                    RotatingImageLoading(
-                                        drawableRes = LoadingIcons.entries.random().id,
-                                        stringRes = null,
-                                    )
-                                }
+                                LoadingImage(modifier)
                             }
 
                             is PreloadState.Success, PreloadState.Fail -> {
@@ -443,9 +438,8 @@ private fun PhotoGrid(
                         }
 
                     }
-                    repeat(columnCount - row.size) {
-                        Box(modifier = modifier.weight(1f))
-                    }
+
+                    EmptySpace(modifier = modifier, count = columnCount - row.size)
                 }
             }
         }
@@ -474,6 +468,47 @@ private fun mapViewSettings(
             uiSettings.isScaleBarEnabled = false
             uiSettings.isZoomControlEnabled = false
         }
+    }
+}
+
+private fun LazyListScope.labelWithPhotos(
+    label: @Composable () -> Unit,
+    columnCount: Int,
+    photos: List<PhotoItem>,
+    photosRow: @Composable (List<PhotoItem>) -> Unit
+) {
+    item { label() }
+
+    items(photos.windowed(columnCount, columnCount, true)) { row ->
+        photosRow(row)
+    }
+}
+
+@Composable
+private fun RowScope.EmptySpace(
+    modifier: Modifier = Modifier,
+    count: Int,
+) {
+    repeat(count) {
+        Box(modifier = modifier.weight(1f))
+    }
+}
+
+@Composable
+private fun RowScope.LoadingImage(
+    modifier: Modifier = Modifier
+){
+    Box(
+        modifier = modifier
+            .wrapContentSize(Alignment.Center)
+            .aspectRatio(1f)
+            .weight(1f)
+            .clip(MaterialTheme.shapes.medium),
+    ) {
+        RotatingImageLoading(
+            drawableRes = LoadingIcons.entries.random().id,
+            stringRes = null,
+        )
     }
 }
 
