@@ -1,6 +1,5 @@
 package com.and04.naturealbum.ui.add.labelsearch
 
-import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -42,10 +41,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.and04.naturealbum.NatureAlbum
 import com.and04.naturealbum.R
 import com.and04.naturealbum.data.localdata.room.Label
-import com.and04.naturealbum.ui.add.labelsearch.contract.LabelSearchEffect
 import com.and04.naturealbum.ui.add.labelsearch.contract.LabelSearchIntent
 import com.and04.naturealbum.ui.add.labelsearch.contract.LabelSearchState
 import com.and04.naturealbum.ui.add.savephoto.SavePhotoViewModel
@@ -53,43 +50,26 @@ import com.and04.naturealbum.ui.component.LabelChip
 import com.and04.naturealbum.ui.component.ProgressIndicator
 import com.and04.naturealbum.ui.utils.UiState
 import com.and04.naturealbum.utils.color.toColor
-import org.orbitmvi.orbit.compose.collectSideEffect
 
 @Composable
 fun LabelSearchScreen(
     state: () -> LabelSearchState,
-    onSelected: (Label) -> Unit,
-    viewModel: LabelSearchViewModel,
+    onIntent: (LabelSearchIntent) -> Unit,
     savePhotoViewModel: SavePhotoViewModel,
 ) {
     val vertexAIState = savePhotoViewModel.vertexAIState.collectAsStateWithLifecycle()
 
-    viewModel.collectSideEffect { sideEffect ->
-        when (sideEffect) {
-            is LabelSearchEffect.LabelSelected -> {
-                onSelected(state().label)
-            }
-
-            is LabelSearchEffect.ToastMassage -> {
-                Toast.makeText(
-                    NatureAlbum.getInstance(),
-                    sideEffect.massage.text,
-                    Toast.LENGTH_LONG
-                ).show()
-            }
-        }
-    }
-
     LabelSearchScreen(
         vertexAIState = vertexAIState,
         state = state,
-        onIntent = viewModel::onIntent,
+        onIntent = onIntent,
     )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LabelSearchScreen(
+    modifier: Modifier = Modifier,
     vertexAIState: State<UiState<String>>,
     state: () -> LabelSearchState,
     onIntent: (LabelSearchIntent) -> Unit,
@@ -111,7 +91,7 @@ fun LabelSearchScreen(
     ) { innerPadding ->
         when (state().uiState) {
             is LabelSearchUiState.Loading -> {
-                Box(modifier = Modifier.padding(innerPadding)) {
+                Box(modifier = modifier.padding(innerPadding)) {
                     ProgressIndicator(true)
                 }
             }
@@ -131,20 +111,21 @@ fun LabelSearchScreen(
 
 @Composable
 private fun SearchContent(
+    modifier: Modifier = Modifier,
     innerPadding: PaddingValues,
     vertexAIState: State<UiState<String>>,
     state: () -> LabelSearchState,
     onIntent: (LabelSearchIntent) -> Unit,
 ) {
     Column(
-        modifier = Modifier
+        modifier = modifier
             .padding(innerPadding)
             .fillMaxSize()
     ) {
         LabelTextField(query = state().query, onIntent = onIntent)
 
         Text(
-            modifier = Modifier.padding(12.dp),
+            modifier = modifier.padding(12.dp),
             text = stringResource(R.string.label_search_select_create),
             style = MaterialTheme.typography.bodyMedium
         )
