@@ -57,9 +57,7 @@ class LabelSearchViewModel @Inject constructor(
                 }
 
                 postSideEffect(
-                    if (state.query.isBlank()) {
-                        LabelSearchEffect.ToastMassage(LabelSelectEffectMassage.EMPTY)
-                    } else if (state.labelList.any { label -> label.name == state.query }) {
+                    if (state.labelList.any { label -> label.name == state.query }) {
                         LabelSearchEffect.ToastMassage(LabelSelectEffectMassage.USED)
                     } else {
                         LabelSearchEffect.LabelSelected
