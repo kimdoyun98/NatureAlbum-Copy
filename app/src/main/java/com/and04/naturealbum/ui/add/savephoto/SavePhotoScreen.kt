@@ -30,17 +30,12 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SuggestionChip
-import androidx.compose.material3.SuggestionChipDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -49,7 +44,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.TextUnitType
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.Bitmap
 import com.and04.naturealbum.R
 import com.and04.naturealbum.background.service.FirebaseInsertService
@@ -66,6 +60,7 @@ import com.and04.naturealbum.ui.add.savephoto.contract.SavePhotoIntent
 import com.and04.naturealbum.ui.add.savephoto.contract.SavePhotoState
 import com.and04.naturealbum.ui.component.AppBarType
 import com.and04.naturealbum.ui.component.BackgroundImage
+import com.and04.naturealbum.ui.component.LabelChip
 import com.and04.naturealbum.ui.component.ProgressIndicator
 import com.and04.naturealbum.ui.component.RotatingImageLoading
 import com.and04.naturealbum.ui.theme.NatureAlbumTheme
@@ -313,16 +308,13 @@ fun LabelSelection(
                         .padding(horizontal = 24.dp)
                 ) {
                     label()?.let { label ->
-                        val backgroundColor = Color(label.backgroundColor.toLong(16))
-                        SuggestionChip(
-                            onClick = { onClick() },
-                            label = { Text(text = label.name) },
-                            colors = SuggestionChipDefaults.suggestionChipColors(
-                                containerColor = backgroundColor,
-                                labelColor = if (backgroundColor.luminance() > 0.5f) Color.Black else Color.White,
-                            ),
-                            modifier = Modifier.heightIn(max = 24.dp)
-                        )
+                        LabelChip(
+                            modifier = Modifier.heightIn(max = 24.dp),
+                            backgroundColor = label.backgroundColor,
+                            onClick = onClick
+                        ) {
+                            Text(text = label.name)
+                        }
                     } ?: Text(text = stringResource(R.string.save_photo_screen_select_label))
                 }
             }

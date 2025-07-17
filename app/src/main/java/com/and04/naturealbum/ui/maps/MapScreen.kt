@@ -25,8 +25,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SuggestionChip
-import androidx.compose.material3.SuggestionChipDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -34,8 +32,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -55,6 +51,7 @@ import coil3.request.crossfade
 import coil3.request.placeholder
 import com.and04.naturealbum.NatureAlbum
 import com.and04.naturealbum.R
+import com.and04.naturealbum.ui.component.LabelChip
 import com.and04.naturealbum.ui.component.LoadingAsyncImage
 import com.and04.naturealbum.ui.component.LoadingIcons
 import com.and04.naturealbum.ui.component.NetworkDisconnectContent
@@ -71,7 +68,6 @@ import com.and04.naturealbum.ui.maps.utils.MapInfo
 import com.and04.naturealbum.ui.maps.utils.PhotoItem
 import com.and04.naturealbum.ui.maps.utils.PreloadState
 import com.and04.naturealbum.ui.utils.UserManager
-import com.and04.naturealbum.utils.color.toColor
 import com.and04.naturealbum.utils.network.NetworkState
 import com.naver.maps.geometry.LatLngBounds
 import com.naver.maps.map.CameraAnimation
@@ -384,25 +380,17 @@ private fun PhotoGrid(
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         groupByLabel.forEach { (label, photos) ->
-            val backgroundColor = label.color.toColor()
-
             labelWithPhotos(
                 label = {
-                    SuggestionChip(
-                        onClick = {},
-                        label = {
-                            Text(
-                                text = label.name,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        },
-                        modifier = modifier,
-                        colors = SuggestionChipDefaults.suggestionChipColors(
-                            containerColor = backgroundColor,
-                            labelColor = if (backgroundColor.luminance() > 0.5f) Color.Black else Color.White
-                        ),
-                    )
+                    LabelChip(
+                        backgroundColor = label.color
+                    ) {
+                        Text(
+                            text = label.name,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
                 },
                 columnCount = columnCount,
                 photos = photos,
@@ -497,7 +485,7 @@ private fun RowScope.EmptySpace(
 @Composable
 private fun RowScope.LoadingImage(
     modifier: Modifier = Modifier
-){
+) {
     Box(
         modifier = modifier
             .wrapContentSize(Alignment.Center)

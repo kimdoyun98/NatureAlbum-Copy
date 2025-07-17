@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -50,6 +49,7 @@ import com.and04.naturealbum.ui.add.labelsearch.contract.LabelSearchEffect
 import com.and04.naturealbum.ui.add.labelsearch.contract.LabelSearchIntent
 import com.and04.naturealbum.ui.add.labelsearch.contract.LabelSearchState
 import com.and04.naturealbum.ui.add.savephoto.SavePhotoViewModel
+import com.and04.naturealbum.ui.component.LabelChip
 import com.and04.naturealbum.ui.component.ProgressIndicator
 import com.and04.naturealbum.ui.utils.UiState
 import com.and04.naturealbum.utils.color.toColor
@@ -216,17 +216,13 @@ private fun UnderLineSuggestionChip(
     label: Label,
     onIntent: (LabelSearchIntent) -> Unit,
 ) {
-    SuggestionChip(
-        modifier = Modifier
-            .padding(start = 12.dp),
-        onClick = { onIntent(LabelSearchIntent.LabelClicked(label = label)) },
-        label = { Text(label.name) },
-
-        colors = AssistChipDefaults.assistChipColors(
-            containerColor = label.backgroundColor.toColor(),
-            labelColor = if (Color(label.backgroundColor.toLong(16)).luminance() > 0.5f) Color.Black else Color.White
-        )
-    )
+    LabelChip(
+        modifier = Modifier.padding(start = 12.dp),
+        backgroundColor = label.backgroundColor,
+        onClick = { onIntent(LabelSearchIntent.LabelClicked(label = label)) }
+    ) {
+        Text(label.name)
+    }
 
     Spacer(
         modifier = Modifier
