@@ -110,7 +110,8 @@ class ClusterManager(
         }
 
         fun getList(
-            onIntent: (MapIntent) -> Unit,
+            onClusterClicked: (List<PhotoItem>) -> Unit,
+            onClusterChanged: (List<PhotoItem>) -> Unit,
         ): ImmutableList<ClusterManager> =
             ColorRange.entries.map { colorRange ->
                 ClusterManager(
@@ -118,24 +119,14 @@ class ClusterManager(
                     onClusterClick = { info ->
                         Overlay.OnClickListener {
                             val bottomSheetPhotos = info.tag as List<PhotoItem>
-                            onIntent(
-                                MapIntent.ClusterClicked(
-                                    bottomSheetPhotos = bottomSheetPhotos.toImmutableList(),
-                                    pick = bottomSheetPhotos
-                                        .groupBy { photoItem -> photoItem.label }
-                                        .maxBy { (_, photoItems) -> photoItems.size }.value
-                                        .maxBy { photoItem -> photoItem.time }
-                                )
-                            )
+                            onClusterClicked(bottomSheetPhotos)
                             true
                         }
                     },
                     onClusterChange = { info ->
                         val changedCluster = info.tag as List<PhotoItem>
                         if (changedCluster.contains(pick)) {
-                            onIntent(
-                                MapIntent.ClusterChanged(bottomSheetPhotos = changedCluster.toImmutableList())
-                            )
+                            onClusterChanged(changedCluster.toImmutableList())
                         }
                     }
                 )
