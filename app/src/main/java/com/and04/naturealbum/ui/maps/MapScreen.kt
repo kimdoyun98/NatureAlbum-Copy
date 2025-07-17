@@ -64,6 +64,7 @@ import com.and04.naturealbum.ui.maps.contract.MapIntent
 import com.and04.naturealbum.ui.maps.contract.MapState
 import com.and04.naturealbum.ui.maps.utils.ClusterManager
 import com.and04.naturealbum.ui.maps.utils.ImageMarker
+import com.and04.naturealbum.ui.maps.utils.LabelItem
 import com.and04.naturealbum.ui.maps.utils.MapInfo
 import com.and04.naturealbum.ui.maps.utils.PhotoItem
 import com.and04.naturealbum.ui.maps.utils.PreloadState
@@ -369,66 +370,55 @@ private fun PhotoGrid(
     onPhotoDoubleClick: (PhotoItem) -> Unit,
     preloadState: ImmutableMap<String, PreloadState>,
 ) {
-    val groupByLabel =
-        photos
-            .groupBy { photoItem -> photoItem.label }
-            .toList()
-            .sortedByDescending { (_, photoItem) -> photoItem.size }
-
-    LazyColumn(
-        modifier = modifier,
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-    ) {
-        groupByLabel.forEach { (label, photos) ->
-            labelWithPhotos(
-                label = {
-                    LabelChip(
-                        backgroundColor = label.color
-                    ) {
-                        Text(
-                            text = label.name,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-                },
-                columnCount = columnCount,
-                photos = photos,
-            ) { row ->
-                Row(
-                    modifier = modifier, horizontalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    row.forEach { photo ->
-                        when (preloadState[photo.uri] ?: PreloadState.Fail) {
-                            is PreloadState.Loading -> {
-                                LoadingImage(modifier)
-                            }
-
-                            is PreloadState.Success, PreloadState.Fail -> {
-                                LoadingAsyncImage(
-                                    model = ImageRequest.Builder(LocalContext.current)
-                                        .data(photo.uri)
-                                        .placeholder(R.drawable.ic_image)
-                                        .build(),
-                                    contentDescription = photo.label.name,
-                                    modifier = modifier
-                                        .wrapContentSize(Alignment.Center)
-                                        .aspectRatio(1f)
-                                        .weight(1f)
-                                        .clip(MaterialTheme.shapes.medium)
-                                        .combinedClickable(
-                                            onClick = { onPhotoClick(photo) },
-                                            onDoubleClick = { onPhotoDoubleClick(photo) },
-                                        ),
-                                    contentScale = ContentScale.Crop,
-                                )
-                            }
+    LabelGroupLazyColumn(
+        photos = photos
+    ) { label, photoList ->
+        labelWithPhotos(
+            label = {
+                LabelChip(backgroundColor = label.color) {
+                    Text(
+                        text = label.name,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            },
+            columnCount = columnCount,
+            photos = photoList,
+        ) { item ->
+            Row(
+                modifier = modifier, horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                item.forEach { photo ->
+                    when (preloadState[photo.uri] ?: PreloadState.Fail) {
+                        is PreloadState.Loading -> {
+                            LoadingImage(modifier)
                         }
 
+                        is PreloadState.Success, PreloadState.Fail -> {
+                            LoadingAsyncImage(
+                                model = ImageRequest.Builder(LocalContext.current)
+                                    .data(photo.uri)
+                                    .placeholder(R.drawable.ic_image)
+                                    .build(),
+                                contentDescription = photo.label.name,
+                                modifier = modifier
+                                    .wrapContentSize(Alignment.Center)
+                                    .aspectRatio(1f)
+                                    .weight(1f)
+                                    .clip(MaterialTheme.shapes.medium)
+                                    .combinedClickable(
+                                        onClick = { onPhotoClick(photo) },
+                                        onDoubleClick = { onPhotoDoubleClick(photo) },
+                                    ),
+                                contentScale = ContentScale.Crop,
+                            )
+                        }
                     }
 
-                    EmptySpace(modifier = modifier, count = columnCount - row.size)
                 }
+
+                EmptySpace(modifier = modifier, count = columnCount - item.size)
             }
         }
     }
@@ -459,6 +449,28 @@ private fun mapViewSettings(
     }
 }
 
+@Composable
+private fun LabelGroupLazyColumn(
+    modifier: Modifier = Modifier,
+    photos: List<PhotoItem>,
+    column: LazyListScope.(LabelItem, List<PhotoItem>) -> Unit,
+) {
+    val groupByLabel =
+        photos
+            .groupBy { photoItem -> photoItem.label }
+            .toList()
+            .sortedByDescending { (_, photoItem) -> photoItem.size }
+
+    LazyColumn(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        groupByLabel.forEach { (label, photos) ->
+            column(label, photos)
+        }
+    }
+}
+
 private fun LazyListScope.labelWithPhotos(
     label: @Composable () -> Unit,
     columnCount: Int,
@@ -467,8 +479,8 @@ private fun LazyListScope.labelWithPhotos(
 ) {
     item { label() }
 
-    items(photos.windowed(columnCount, columnCount, true)) { row ->
-        photosRow(row)
+    items(photos.windowed(columnCount, columnCount, true)) { item ->
+        photosRow(item)
     }
 }
 
