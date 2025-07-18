@@ -1,11 +1,9 @@
 package com.and04.naturealbum.ui.add.savephoto
 
 import android.content.Context
-import android.content.Intent
 import android.content.res.Configuration.UI_MODE_NIGHT_NO
 import android.content.res.Configuration.UI_MODE_NIGHT_YES
 import android.graphics.BitmapFactory
-import android.location.Location
 import android.net.Uri
 import androidx.activity.compose.BackHandler
 import androidx.annotation.StringRes
@@ -14,6 +12,7 @@ import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -22,8 +21,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.outlined.Create
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -46,16 +47,7 @@ import androidx.compose.ui.unit.TextUnitType
 import androidx.compose.ui.unit.dp
 import coil3.Bitmap
 import com.and04.naturealbum.R
-import com.and04.naturealbum.background.service.FirebaseInsertService
-import com.and04.naturealbum.background.service.FirebaseInsertService.Companion.SERVICE_DATETIME
-import com.and04.naturealbum.background.service.FirebaseInsertService.Companion.SERVICE_DESCRIPTION
-import com.and04.naturealbum.background.service.FirebaseInsertService.Companion.SERVICE_FILENAME
-import com.and04.naturealbum.background.service.FirebaseInsertService.Companion.SERVICE_LABEL
-import com.and04.naturealbum.background.service.FirebaseInsertService.Companion.SERVICE_LOCATION_LATITUDE
-import com.and04.naturealbum.background.service.FirebaseInsertService.Companion.SERVICE_LOCATION_LONGITUDE
-import com.and04.naturealbum.background.service.FirebaseInsertService.Companion.SERVICE_URI
 import com.and04.naturealbum.data.localdata.room.Label
-import com.and04.naturealbum.ui.add.savephoto.contract.SavePhotoEffect
 import com.and04.naturealbum.ui.add.savephoto.contract.SavePhotoIntent
 import com.and04.naturealbum.ui.add.savephoto.contract.SavePhotoState
 import com.and04.naturealbum.ui.component.AppBarType
@@ -67,80 +59,10 @@ import com.and04.naturealbum.ui.theme.NatureAlbumTheme
 import com.and04.naturealbum.ui.utils.UiState
 import com.and04.naturealbum.ui.utils.UiStatus
 import com.and04.naturealbum.utils.GetTopBar
-import com.and04.naturealbum.utils.image.ImageConvert
 import com.and04.naturealbum.utils.isPortrait
 import com.and04.naturealbum.utils.network.NetworkState
 import com.and04.naturealbum.utils.network.NetworkState.DISCONNECTED
-import com.google.firebase.auth.ktx.auth
-import com.google.firebase.ktx.Firebase
-import org.orbitmvi.orbit.compose.collectSideEffect
 import java.io.IOException
-import java.time.LocalDateTime
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-
-@Composable
-fun SavePhotoScreen(
-    state: () -> SavePhotoState,
-    initState: () -> SavePhotoState,
-    viewModel: SavePhotoViewModel,
-) {
-    val context = LocalContext.current
-    //val vertexAIState = viewModel.vertexAIState.collectAsStateWithLifecycle()
-
-    viewModel.collectSideEffect { effect ->
-        when (effect) {
-            is SavePhotoEffect.Navigation.Save -> {
-                val time = LocalDateTime.now(ZoneId.of("UTC"))
-                val fileName = "${System.currentTimeMillis()}.jpg"
-                val fileUri = ImageConvert.makeFileToUri(state().uri.toString(), fileName)
-                val label = state().appState?.selectedLabel?.value
-
-                viewModel.savePhoto(
-                    uri = fileUri,
-                    fileName = fileName,
-                    label = label!!,
-                    location = state().location!!,
-                    description = state().description,
-                    isRepresented = state().represented,
-                    time = time
-                )
-
-                insertFirebaseService(
-                    context = context,
-                    uri = fileUri,
-                    fileName = fileName,
-                    label = label,
-                    location = state().location!!,
-                    description = state().description,
-                    time = time
-                )
-            }
-
-            is SavePhotoEffect.Navigation.Back -> state().onBack()
-
-            is SavePhotoEffect.Navigation.Cancel -> state().onCancel()
-
-            is SavePhotoEffect.Navigation.MyPage -> state().onNavigateToMyPage()
-
-            is SavePhotoEffect.Navigation.LabelSelect -> state().onLabelSelect()
-        }
-    }
-
-    SavePhotoScreen(
-        state = { state() },
-        initState = { initState() },
-        changeState = viewModel::changeState,
-        onIntent = viewModel::onIntent,
-    )
-
-//    vertexAI(
-//        context = context,
-//        uri = initState.uri,
-//        vertexAIState = vertexAIState,
-//        getGeneratedContent = viewModel::getGeneratedContent
-//    )
-}
 
 @Composable
 fun SavePhotoScreen(
@@ -149,7 +71,9 @@ fun SavePhotoScreen(
     changeState: (SavePhotoState) -> Unit,
     onIntent: (SavePhotoIntent) -> Unit,
 ) {
+    //val vertexAIState = viewModel.vertexAIState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+
     Scaffold(
         topBar = {
             context.GetTopBar(
@@ -181,19 +105,11 @@ fun SavePhotoScreen(
             }
 
             is UiStatus.Success -> {
-                if (context.isPortrait()) {
-                    SavePhotoScreenPortrait(
-                        innerPadding = innerPadding,
-                        state = state,
-                        onIntent = onIntent,
-                    )
-                } else {
-                    SavePhotoScreenLandscape(
-                        innerPadding = innerPadding,
-                        state = state,
-                        onIntent = onIntent,
-                    )
-                }
+                SavePhotoContent(
+                    innerPadding = innerPadding,
+                    state = state,
+                    onIntent = onIntent,
+                )
             }
         }
     }
@@ -214,10 +130,113 @@ fun SavePhotoScreen(
     }
 
     BackHandler(onBack = { onIntent(SavePhotoIntent.BackButtonClicked) })
+
+    //    vertexAI(
+    //        context = context,
+    //        uri = initState.uri,
+    //        vertexAIState = vertexAIState,
+    //        getGeneratedContent = viewModel::getGeneratedContent
+    //    )
 }
 
 @Composable
-fun IconTextButton(
+private fun SavePhotoContent(
+    innerPadding: PaddingValues,
+    state: () -> SavePhotoState,
+    onIntent: (SavePhotoIntent) -> Unit
+) {
+    val context = LocalContext.current
+    if (context.isPortrait()) {
+        SavePhotoScreenPortrait(
+            innerPadding = innerPadding,
+            state = state,
+            onIntent = onIntent,
+        )
+    } else {
+        SavePhotoScreenLandscape(
+            innerPadding = innerPadding,
+            state = state,
+            onIntent = onIntent,
+        )
+    }
+}
+
+@Composable
+fun ToggleButton(
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier
+            .clickable(onClick = { onClick() }),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        RadioButton(
+            selected = selected,
+            onClick = { onClick() },
+            modifier = modifier
+                .size(24.dp)
+                .focusable(false),
+        )
+        Text(stringResource(R.string.save_photo_screen_set_represent))
+    }
+}
+
+@Composable
+fun ColumnScope.SavePhotoBody(
+    state: () -> SavePhotoState,
+    onIntent: (SavePhotoIntent) -> Unit,
+) {
+    LabelSelection(
+        label = { state().appState?.selectedLabel?.value },
+        onClick = state().onLabelSelect,
+    )
+
+    Description(
+        description = { state().description },
+        modifier = Modifier.weight(1f),
+        onValueChange = { newDescription ->
+            onIntent(
+                SavePhotoIntent.DescriptionInput(
+                    newDescription
+                )
+            )
+        }
+    )
+}
+
+@Composable
+fun SavePhotoFooter(
+    state: () -> SavePhotoState,
+    onIntent: (SavePhotoIntent) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(30.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        IconTextButton(
+            modifier = Modifier.weight(1f),
+            imageVector = Icons.Default.Close,
+            stringRes = R.string.save_photo_screen_cancel,
+            onClick = { onIntent(SavePhotoIntent.CancelButtonClicked) })
+
+        IconTextButton(
+            enabled = (state().appState?.selectedLabel?.value != null) && (state().saveState != UiState.Loading),
+            modifier = Modifier.weight(1f),
+            imageVector = Icons.Outlined.Create,
+            stringRes = R.string.save_photo_screen_save,
+            onClick = { onIntent(SavePhotoIntent.SaveButtonClicked) }
+        )
+    }
+}
+
+@Composable
+private fun IconTextButton(
     enabled: Boolean = true,
     imageVector: ImageVector,
     modifier: Modifier = Modifier,
@@ -250,30 +269,7 @@ fun IconTextButton(
 }
 
 @Composable
-fun ToggleButton(
-    selected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Row(
-        modifier = modifier
-            .clickable(onClick = { onClick() }),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        RadioButton(
-            selected = selected,
-            onClick = { onClick() },
-            modifier = modifier
-                .size(24.dp)
-                .focusable(false),
-        )
-        Text(stringResource(R.string.save_photo_screen_set_represent))
-    }
-}
-
-@Composable
-fun LabelSelection(
+private fun LabelSelection(
     label: () -> Label?,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -284,6 +280,7 @@ fun LabelSelection(
             style = MaterialTheme.typography.headlineLarge,
             fontSize = TextUnit(20f, TextUnitType.Sp),
         )
+
         Button(
             onClick = { onClick() },
             modifier = modifier.fillMaxWidth(),
@@ -327,7 +324,7 @@ fun LabelSelection(
 }
 
 @Composable
-fun Description(
+private fun Description(
     description: () -> String,
     modifier: Modifier,
     onValueChange: (String) -> Unit,
@@ -349,30 +346,6 @@ fun Description(
                 .fillMaxWidth(),
         )
     }
-}
-
-fun insertFirebaseService(
-    context: Context,
-    uri: String,
-    fileName: String,
-    label: Label,
-    location: Location,
-    description: String,
-    time: LocalDateTime,
-) {
-    if (Firebase.auth.currentUser == null || NetworkState.getNetWorkCode() == DISCONNECTED) return
-    val newTime = time.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
-    val intent = Intent(context, FirebaseInsertService::class.java).apply {
-        putExtra(SERVICE_URI, uri)
-        putExtra(SERVICE_FILENAME, fileName)
-        putExtra(SERVICE_LABEL, label)
-        putExtra(SERVICE_LOCATION_LATITUDE, location.latitude)
-        putExtra(SERVICE_LOCATION_LONGITUDE, location.longitude)
-        putExtra(SERVICE_DESCRIPTION, description)
-        putExtra(SERVICE_DATETIME, newTime)
-    }
-
-    context.startService(intent)
 }
 
 private fun vertexAI(
