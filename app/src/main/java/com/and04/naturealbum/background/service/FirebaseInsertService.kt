@@ -9,7 +9,6 @@ import androidx.core.net.toUri
 import com.and04.naturealbum.data.dto.FirebaseLabel
 import com.and04.naturealbum.data.dto.FirebasePhotoInfo
 import com.and04.naturealbum.data.localdata.room.HazardAnalyzeStatus
-import com.and04.naturealbum.data.localdata.room.Label
 import com.and04.naturealbum.data.localdata.room.PhotoDetailDao
 import com.and04.naturealbum.data.repository.RetrofitRepository
 import com.and04.naturealbum.data.repository.firebase.AlbumRepository
@@ -43,17 +42,11 @@ class FirebaseInsertService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         try {
             val uid = Firebase.auth.currentUser!!.uid
-            val uri = intent?.getStringExtra(SERVICE_URI) as String
-            val fileName = intent.getStringExtra(SERVICE_FILENAME)!!
-            val dateTime = intent.getStringExtra(SERVICE_DATETIME)!!
-            val label = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                intent.getParcelableExtra(SERVICE_LABEL, Label::class.java)!!
+            val insertPhoto = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                intent?.getParcelableExtra(FIREBASE_INSERT_DATA, InsertPhoto::class.java)!!
             } else {
-                intent.getParcelableExtra<Label>(SERVICE_LABEL)!!
+                intent?.getParcelableExtra<InsertPhoto>(FIREBASE_INSERT_DATA)!!
             }
-            val latitude = intent.getDoubleExtra(SERVICE_LOCATION_LATITUDE, 0.0)
-            val longitude = intent.getDoubleExtra(SERVICE_LOCATION_LONGITUDE, 0.0)
-            val description = intent.getStringExtra(SERVICE_DESCRIPTION) as String
 
             val exceptionHandler = CoroutineExceptionHandler { _, throwable ->
                 Log.e("FirebaseInsertService-onStartCommand", "$throwable : 이미지 저장 오류")
@@ -61,36 +54,23 @@ class FirebaseInsertService : Service() {
             }
 
             job = scope.launch(exceptionHandler) {
-                val imgEncoding = ImageConvert.getBase64FromUri(applicationContext, uri)
-
-                val hazardMapperResult =
-                    retrofitRepository.analyzeHazardWithGreenEye(imgEncoding)
-                if (hazardMapperResult == HazardAnalyzeStatus.FAIL) {
-                    photoDetailDao.updateHazardCheckResultByFIleName(
-                        HazardAnalyzeStatus.FAIL,
-                        fileName
-                    )
+                if (!isCleanImage(insertPhoto.uri, insertPhoto.fileName)) {
                     stopService(intent)
                     return@launch
-                } else {
-                    photoDetailDao.updateHazardCheckResultByFIleName(
-                        HazardAnalyzeStatus.PASS,
-                        fileName
-                    )
                 }
 
                 val storageUriDeferred = async {
                     albumRepository.saveImageFile(
                         uid = uid,
-                        label = label.name,
-                        fileName = fileName,
-                        uri = uri.toUri()
+                        label = insertPhoto.label.name,
+                        fileName = insertPhoto.fileName,
+                        uri = insertPhoto.uri.toUri()
                     )
                 }
                 val serverNoLabelDeferred = async {
                     val serverLabels = albumRepository.getLabelsToList(uid).getOrThrow()
                     serverLabels.none { serverLabel ->
-                        serverLabel.labelName == label.name
+                        serverLabel.labelName == insertPhoto.label.name
                     }
                 }
 
@@ -102,11 +82,11 @@ class FirebaseInsertService : Service() {
                         albumRepository
                             .insertLabel(
                                 uid = uid,
-                                labelName = label.name,
+                                labelName = insertPhoto.label.name,
                                 labelData = FirebaseLabel(
-                                    backgroundColor = label.backgroundColor,
+                                    backgroundColor = insertPhoto.label.backgroundColor,
                                     thumbnailUri = storageUri.toString(),
-                                    fileName = fileName
+                                    fileName = insertPhoto.fileName
                                 )
                             )
                     }
@@ -115,28 +95,53 @@ class FirebaseInsertService : Service() {
                 val insertPhotoInfoJob = launch {
                     albumRepository.insertPhotoInfo(
                         uid = uid,
-                        fileName = fileName,
+                        fileName = insertPhoto.fileName,
                         photoData = FirebasePhotoInfo(
                             uri = storageUri.toString(),
-                            label = label.name,
-                            latitude = latitude,
-                            longitude = longitude,
-                            description = description,
-                            datetime = dateTime
+                            label = insertPhoto.label.name,
+                            latitude = insertPhoto.latitude,
+                            longitude = insertPhoto.longitude,
+                            description = insertPhoto.description,
+                            datetime = insertPhoto.dateTime
                         )
                     )
                 }
 
                 joinAll(insertLabelJob, insertPhotoInfoJob)
-                stopService(intent)
             }
 
         } catch (e: NullPointerException) {
             Log.e("FirebaseInsertService", e.toString())
+        } finally {
             stopService(intent)
         }
 
         return START_NOT_STICKY
+    }
+
+    private suspend fun isCleanImage(
+        uri: String,
+        fileName: String
+    ): Boolean {
+        val imgEncoding = ImageConvert.getBase64FromUri(applicationContext, uri)
+
+        val hazardMapperResult =
+            retrofitRepository.analyzeHazardWithGreenEye(imgEncoding)
+        if (hazardMapperResult == HazardAnalyzeStatus.FAIL) {
+            photoDetailDao.updateHazardCheckResultByFIleName(
+                HazardAnalyzeStatus.FAIL,
+                fileName
+            )
+
+            return false
+        } else {
+            photoDetailDao.updateHazardCheckResultByFIleName(
+                HazardAnalyzeStatus.PASS,
+                fileName
+            )
+        }
+
+        return true
     }
 
     override fun onBind(p0: Intent?): IBinder? {
@@ -149,12 +154,7 @@ class FirebaseInsertService : Service() {
     }
 
     companion object {
-        const val SERVICE_URI = "service_uri"
-        const val SERVICE_FILENAME = "service_filename"
+        const val FIREBASE_INSERT_DATA = "firebase_insert_data"
         const val SERVICE_LABEL = "service_label"
-        const val SERVICE_LOCATION_LATITUDE = "service_location_latitude"
-        const val SERVICE_LOCATION_LONGITUDE = "service_location_longitude"
-        const val SERVICE_DESCRIPTION = "service_location"
-        const val SERVICE_DATETIME = "service_datetime"
     }
 }

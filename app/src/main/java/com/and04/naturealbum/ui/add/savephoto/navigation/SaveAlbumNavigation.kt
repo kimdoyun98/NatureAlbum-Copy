@@ -2,7 +2,6 @@ package com.and04.naturealbum.ui.add.savephoto.navigation
 
 import android.content.Context
 import android.content.Intent
-import android.location.Location
 import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.result.ActivityResult
 import androidx.compose.runtime.getValue
@@ -12,14 +11,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import com.and04.naturealbum.background.service.FirebaseInsertService
-import com.and04.naturealbum.background.service.FirebaseInsertService.Companion.SERVICE_DATETIME
-import com.and04.naturealbum.background.service.FirebaseInsertService.Companion.SERVICE_DESCRIPTION
-import com.and04.naturealbum.background.service.FirebaseInsertService.Companion.SERVICE_FILENAME
-import com.and04.naturealbum.background.service.FirebaseInsertService.Companion.SERVICE_LABEL
-import com.and04.naturealbum.background.service.FirebaseInsertService.Companion.SERVICE_LOCATION_LATITUDE
-import com.and04.naturealbum.background.service.FirebaseInsertService.Companion.SERVICE_LOCATION_LONGITUDE
-import com.and04.naturealbum.background.service.FirebaseInsertService.Companion.SERVICE_URI
-import com.and04.naturealbum.data.localdata.room.Label
+import com.and04.naturealbum.background.service.FirebaseInsertService.Companion.FIREBASE_INSERT_DATA
+import com.and04.naturealbum.background.service.InsertPhoto
 import com.and04.naturealbum.ui.add.savephoto.SavePhotoScreen
 import com.and04.naturealbum.ui.add.savephoto.SavePhotoViewModel
 import com.and04.naturealbum.ui.add.savephoto.contract.SavePhotoEffect
@@ -73,12 +66,15 @@ fun NavGraphBuilder.saveAlbumNavGraph(
 
                     insertFirebaseService(
                         context = context,
-                        uri = fileUri,
-                        fileName = fileName,
-                        label = label,
-                        location = savePhotoState.location!!,
-                        description = savePhotoState.description,
-                        time = time
+                        insertPhoto = InsertPhoto(
+                            uri = fileUri,
+                            fileName = fileName,
+                            label = label,
+                            dateTime = time.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME),
+                            latitude = savePhotoState.location!!.latitude,
+                            longitude = savePhotoState.location!!.longitude,
+                            description = savePhotoState.description
+                        )
                     )
                 }
 
@@ -103,23 +99,11 @@ fun NavGraphBuilder.saveAlbumNavGraph(
 
 private fun insertFirebaseService(
     context: Context,
-    uri: String,
-    fileName: String,
-    label: Label,
-    location: Location,
-    description: String,
-    time: LocalDateTime,
+    insertPhoto: InsertPhoto
 ) {
     if (Firebase.auth.currentUser == null || NetworkState.getNetWorkCode() == DISCONNECTED) return
-    val newTime = time.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
     val intent = Intent(context, FirebaseInsertService::class.java).apply {
-        putExtra(SERVICE_URI, uri)
-        putExtra(SERVICE_FILENAME, fileName)
-        putExtra(SERVICE_LABEL, label)
-        putExtra(SERVICE_LOCATION_LATITUDE, location.latitude)
-        putExtra(SERVICE_LOCATION_LONGITUDE, location.longitude)
-        putExtra(SERVICE_DESCRIPTION, description)
-        putExtra(SERVICE_DATETIME, newTime)
+        putExtra(FIREBASE_INSERT_DATA, insertPhoto)
     }
 
     context.startService(intent)
